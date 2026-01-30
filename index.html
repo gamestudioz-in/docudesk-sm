@@ -1,0 +1,1510 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>e-Service Manager</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Google Fonts: Roboto -->
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+
+    <!-- SheetJS -->
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Roboto', 'sans-serif'],
+                    },
+                    colors: {
+                        gov: {
+                            blue: '#1a3c6e',    // Official Deep Blue
+                            light: '#e8f0fe',   // Light Blue background
+                            accent: '#e67e22',  // Orange accent
+                            green: '#27ae60',   // Success Green
+                            red: '#c0392b'      // Error Red
+                        }
+                    },
+                    boxShadow: {
+                        'card': '0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24)',
+                        'floating': '0 3px 6px rgba(0,0,0,0.16), 0 3px 6px rgba(0,0,0,0.23)'
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            -webkit-tap-highlight-color: transparent;
+            background-color: #f0f2f5;
+            overflow: hidden;
+            user-select: none;
+        }
+        
+        .app-container {
+            max-width: 480px;
+            margin: 0 auto;
+            height: 100dvh; 
+            display: flex;
+            flex-direction: column;
+            background-color: #f0f2f5;
+            position: relative;
+            overflow: hidden; /* Important for absolute sidebar */
+        }
+
+        .scroll-area {
+            flex: 1;
+            overflow-y: auto;
+            overscroll-behavior-y: contain;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+
+        /* Material Input */
+        .input-group {
+            position: relative;
+            margin-bottom: 20px;
+            background: white;
+            border-radius: 4px;
+        }
+        .input-group input, .input-group select, .input-group textarea {
+            width: 100%;
+            padding: 24px 16px 8px 16px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 16px;
+            outline: none;
+            background: transparent;
+            transition: border-color 0.2s;
+            appearance: none;
+            resize: none;
+        }
+        .input-group label {
+            position: absolute;
+            top: 16px;
+            left: 16px;
+            font-size: 16px;
+            color: #777;
+            pointer-events: none;
+            transition: 0.2s ease all;
+            background-color: transparent;
+        }
+        /* Focus states for input, select, and textarea */
+        .input-group input:focus, .input-group select:focus, .input-group textarea:focus,
+        .input-group input:not(:placeholder-shown), .input-group select:not(:placeholder-shown), .input-group textarea:not(:placeholder-shown) {
+            border-color: #1a3c6e;
+            border-width: 2px;
+        }
+        .input-group input:focus + label, .input-group select:focus + label, .input-group textarea:focus + label,
+        .input-group input:not(:placeholder-shown) + label, .input-group select:not(:placeholder-shown) + label, .input-group textarea:not(:placeholder-shown) + label {
+            top: 6px;
+            font-size: 11px;
+            color: #1a3c6e;
+            font-weight: 700;
+        }
+
+        /* Checkbox Style */
+        .checkbox-group label {
+            display: flex;
+            align-items: center;
+            padding: 12px;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            color: #333;
+        }
+        .checkbox-group input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            margin-right: 12px;
+            accent-color: #1a3c6e;
+        }
+
+        .card-pmc { border-left: 5px solid #1a3c6e; }
+        .card-msed { border-left: 5px solid #e67e22; }
+
+        .slide-up {
+            animation: slideUp 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+        }
+        @keyframes slideUp {
+            from { transform: translateY(100%); }
+            to { transform: translateY(0); }
+        }
+        
+        .fade-in { animation: fadeIn 0.2s ease-out forwards; }
+        .scale-in { animation: scaleIn 0.2s ease-out forwards; }
+        
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes scaleIn { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+        /* Notification Styles */
+        .notif-unread {
+            background-color: white;
+            border-left: 4px solid #1a3c6e;
+        }
+        .notif-read {
+            background-color: #f1f5f9;
+            border-left: 4px solid #cbd5e1;
+            opacity: 0.8;
+        }
+        
+        /* Sidebar Animations */
+        .sidebar-transition {
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* Progress Circle */
+        .progress-circle {
+            transform: rotate(-90deg);
+            transform-origin: 50% 50%;
+        }
+    </style>
+</head>
+<body>
+
+<div class="app-container shadow-2xl">
+    
+    <!-- Top App Bar -->
+    <header class="bg-gov-blue text-white h-14 flex items-center justify-between px-4 shadow-md z-20 shrink-0">
+        <div class="flex items-center gap-3">
+            <button onclick="openSidebar()" class="p-2 -ml-2 active:bg-white/10 rounded-full transition">
+                <i class="fa-solid fa-bars text-lg opacity-80"></i>
+            </button>
+            <div>
+                <h1 class="text-lg font-medium leading-none">Service Manager</h1>
+                <p class="text-[10px] opacity-70 uppercase tracking-wider mt-0.5">DocuDesk</p>
+            </div>
+        </div>
+        <div class="relative cursor-pointer p-2" onclick="toggleNotifications()">
+             <i class="fa-solid fa-bell text-lg"></i>
+             <span id="notif-badge" class="absolute top-1 right-1 bg-red-500 w-2.5 h-2.5 rounded-full border-2 border-gov-blue hidden"></span>
+        </div>
+    </header>
+
+    <!-- SIDEBAR MENU -->
+    <div id="sidebar-overlay" class="absolute inset-0 bg-black/50 z-40 hidden transition-opacity duration-300 opacity-0" onclick="closeSidebar()"></div>
+    <div id="sidebar-menu" class="absolute top-0 left-0 bottom-0 w-1/2 bg-white z-50 shadow-2xl transform -translate-x-full sidebar-transition flex flex-col">
+        <!-- Sidebar Header -->
+        <div class="h-32 bg-gov-blue flex flex-col justify-end p-4 text-white">
+            <div class="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center mb-2 text-sm">
+                <i class="fa-solid fa-user"></i>
+            </div>
+            <h2 class="font-bold text-base">DocuDesk Admin</h2>
+            <p class="text-[10px] opacity-70">Logged in</p>
+        </div>
+        
+        <!-- Sidebar Options -->
+        <div class="flex-1 py-2">
+            <div class="px-4 py-3 bg-blue-50 text-gov-blue text-sm font-bold border-l-4 border-gov-blue flex items-center gap-3">
+                <i class="fa-solid fa-layer-group"></i> e-Service Manager
+            </div>
+            <button onclick="openExportModal()" class="w-full px-4 py-3 text-gray-700 hover:bg-gray-50 text-left flex items-center gap-3 text-sm transition">
+                <i class="fa-solid fa-file-export text-gray-400 w-5 text-center"></i> Export Data
+            </button>
+            <button onclick="copyURL()" class="w-full px-4 py-3 text-gray-700 hover:bg-gray-50 text-left flex items-center gap-3 text-sm transition">
+                <i class="fa-solid fa-link text-gray-400 w-5 text-center"></i> Copy URL
+            </button>
+        </div>
+
+        <!-- Storage Info -->
+        <div class="px-4 py-3 border-t border-gray-100 bg-gray-50/50">
+            <div class="flex justify-between items-end mb-1">
+                <p class="text-[10px] text-gray-400 uppercase tracking-widest font-bold">Storage Used</p>
+                <p class="text-[10px] text-gray-400" id="storage-quota">calculating...</p>
+            </div>
+            <div class="flex items-center gap-2">
+                <p class="text-sm font-bold text-gov-blue" id="storage-usage">0 KB</p>
+                <div class="flex-1 bg-gray-200 rounded-full h-1.5">
+                    <div id="storage-bar" class="bg-gov-accent h-1.5 rounded-full transition-all duration-500" style="width: 0%"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar Footer -->
+        <div class="p-4 border-t border-gray-100 text-center">
+            <p class="text-[10px] text-gray-400 uppercase tracking-widest">Developed by</p>
+            <p class="text-xs font-bold text-gray-600 mt-0.5">YASIR DIVDE</p>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <main id="main-content" class="scroll-area relative pb-20">
+        
+        <!-- DASHBOARD VIEW -->
+        <div id="view-dashboard" class="p-4">
+            <!-- Welcome Banner -->
+            <div class="bg-white p-4 rounded-lg shadow-card mb-4 border-t-4 border-gov-blue">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <h2 class="text-gov-blue font-bold text-lg">Dashboard</h2>
+                        <p class="text-gray-500 text-xs mt-1">Overview of your applications</p>
+                    </div>
+                    <div class="bg-gov-light text-gov-blue px-3 py-1 rounded text-xs font-bold">
+                        ALL TIME
+                    </div>
+                </div>
+                
+                <div class="grid grid-cols-2 gap-4 mt-4">
+                    <div class="text-center p-2 bg-gray-50 rounded border border-gray-100">
+                        <div class="text-2xl font-bold text-gray-800" id="dash-total">0</div>
+                        <div class="text-xs text-gray-500 uppercase font-medium">Total Apps</div>
+                    </div>
+                    <div class="text-center p-2 bg-gray-50 rounded border border-gray-100">
+                        <div class="text-2xl font-bold text-gov-accent" id="dash-pending">0</div>
+                        <div class="text-xs text-gray-500 uppercase font-medium">Pending</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Applications Header -->
+            <div class="flex justify-between items-center mb-3 mt-6">
+                <h3 class="text-gray-700 font-bold text-sm uppercase tracking-wide">Recent Activity</h3>
+                <button onclick="switchTab('manage')" class="text-gov-blue text-xs font-bold uppercase">View All</button>
+            </div>
+
+            <div id="recent-list" class="space-y-3">
+                <!-- Rendered by JS -->
+            </div>
+        </div>
+
+        <!-- MANAGE VIEW -->
+        <div id="view-manage" class="hidden p-4 min-h-full">
+            <div class="sticky top-0 bg-[#f0f2f5] z-10 pb-2">
+                <div class="bg-white rounded shadow-sm p-2 flex gap-2">
+                    <i class="fa-solid fa-search text-gray-400 p-2"></i>
+                    <input type="text" id="search-input" onkeyup="renderList()" placeholder="Search ID, Name, Mobile..." class="w-full outline-none text-sm text-gray-700">
+                </div>
+                
+                <div class="flex gap-2 mt-3 overflow-x-auto pb-1 no-scrollbar">
+                    <button onclick="filterList('all')" id="tab-all" class="px-4 py-1.5 rounded-full text-xs font-bold bg-gov-blue text-white shadow-sm whitespace-nowrap">All Apps</button>
+                    <button onclick="filterList('pmc')" id="tab-pmc" class="px-4 py-1.5 rounded-full text-xs font-bold bg-white text-gray-600 border border-gray-300 whitespace-nowrap">PMC</button>
+                    <button onclick="filterList('msed')" id="tab-msed" class="px-4 py-1.5 rounded-full text-xs font-bold bg-white text-gray-600 border border-gray-300 whitespace-nowrap">MSED</button>
+                    <button onclick="filterList('completed')" id="tab-completed" class="px-4 py-1.5 rounded-full text-xs font-bold bg-white text-gray-600 border border-gray-300 whitespace-nowrap">Completed</button>
+                </div>
+            </div>
+
+            <div id="manage-list" class="space-y-3 mt-2">
+                <!-- Rendered by JS -->
+            </div>
+            
+            <div id="empty-msg" class="hidden flex-col items-center justify-center mt-20 opacity-50">
+                <i class="fa-solid fa-folder-open text-4xl mb-2"></i>
+                <p class="text-sm font-medium">No Records Found</p>
+            </div>
+        </div>
+
+        <!-- NOTIFICATIONS VIEW -->
+        <div id="view-notifications" class="hidden p-4 min-h-full bg-[#f0f2f5]">
+            <h2 class="text-lg font-bold text-gov-blue mb-4 px-1">Notifications</h2>
+            <div id="notif-list" class="space-y-3 pb-20">
+                <!-- Rendered by JS -->
+            </div>
+            <div id="notif-empty" class="hidden flex-col items-center justify-center mt-20 opacity-50">
+                <i class="fa-regular fa-bell-slash text-4xl mb-2"></i>
+                <p class="text-sm font-medium">No Notifications</p>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- EXPORT MODAL -->
+    <div id="export-modal" class="fixed inset-0 bg-black/60 z-[60] hidden flex items-center justify-center px-4 fade-in">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-sm p-6 scale-in relative overflow-hidden">
+            <!-- Close Button -->
+            <button onclick="closeExportModal()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600">
+                <i class="fa-solid fa-xmark text-xl"></i>
+            </button>
+
+            <h3 class="text-lg font-bold text-center text-gov-blue mb-6">Backup Data</h3>
+            
+            <!-- Progress Section -->
+            <div class="flex flex-col items-center justify-center mb-6">
+                <div class="relative w-32 h-32">
+                    <svg class="w-full h-full" viewBox="0 0 100 100">
+                        <!-- Background circle -->
+                        <circle cx="50" cy="50" r="45" fill="none" stroke="#e8f0fe" stroke-width="8" />
+                        <!-- Progress circle -->
+                        <circle id="export-progress-circle" class="progress-circle" cx="50" cy="50" r="45" fill="none" stroke="#1a3c6e" stroke-width="8" stroke-dasharray="283" stroke-dashoffset="283" stroke-linecap="round" style="transition: stroke-dashoffset 0.1s linear;" />
+                    </svg>
+                    <div class="absolute inset-0 flex items-center justify-center">
+                        <span id="export-percent" class="text-2xl font-bold text-gov-blue">0%</span>
+                    </div>
+                </div>
+                <p id="export-status" class="text-sm text-gray-500 mt-4 font-medium animate-pulse">Preparing data...</p>
+            </div>
+            
+            <!-- Actions -->
+            <div id="export-action-container" class="hidden">
+                <button onclick="downloadExport()" class="w-full py-3 rounded-lg bg-gov-green text-white font-bold text-sm shadow-lg hover:bg-green-700 transition flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-download"></i> Download File
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- FAB -->
+    <div class="absolute bottom-6 left-1/2 transform -translate-x-1/2 z-30">
+        <button onclick="openServiceSelection()" class="bg-gov-accent text-white w-14 h-14 rounded-full shadow-floating flex items-center justify-center text-2xl active:scale-95 transition-transform border-4 border-[#f0f2f5]">
+            <i class="fa-solid fa-plus"></i>
+        </button>
+    </div>
+
+    <!-- Bottom Navigation -->
+    <nav class="bg-white h-16 border-t border-gray-200 flex items-center z-20 shadow-[0_-2px_10px_rgba(0,0,0,0.05)] shrink-0">
+        <div class="flex-1 flex justify-center">
+            <button onclick="switchTab('dashboard')" id="nav-dashboard" class="flex flex-col items-center text-gov-blue w-full">
+                <i class="fa-solid fa-house text-xl mb-1"></i>
+                <span class="text-[10px] font-bold">Home</span>
+            </button>
+        </div>
+        
+        <div class="w-14 shrink-0"></div> <!-- Space for FAB -->
+
+        <div class="flex-1 flex justify-center">
+            <button onclick="switchTab('manage')" id="nav-manage" class="flex flex-col items-center text-gray-400 w-full">
+                <i class="fa-solid fa-list-check text-xl mb-1"></i>
+                <span class="text-[10px] font-bold">Manage</span>
+            </button>
+        </div>
+    </nav>
+
+    <!-- SERVICE SELECTION -->
+    <div id="service-modal" class="fixed inset-0 bg-gov-blue z-50 hidden flex flex-col h-[100dvh]">
+        <div class="p-4 pt-10 text-white shrink-0">
+            <button onclick="closeServiceSelection()" class="mb-6 text-white/80 hover:text-white"><i class="fa-solid fa-arrow-left text-xl"></i> Back</button>
+            <h2 class="text-2xl font-bold">Select Service</h2>
+            <p class="text-white/70 text-sm">Choose the type of application to create</p>
+        </div>
+        
+        <div class="flex-1 bg-[#f0f2f5] rounded-t-[30px] p-6 space-y-4 slide-up overflow-y-auto">
+            <div onclick="openForm('PMC')" class="bg-white p-5 rounded-xl shadow-card flex items-center gap-4 border-l-8 border-gov-blue active:bg-blue-50 transition cursor-pointer">
+                <div class="w-12 h-12 rounded-full bg-blue-100 text-gov-blue flex items-center justify-center text-xl shrink-0">
+                    <i class="fa-solid fa-building-columns"></i>
+                </div>
+                <div>
+                    <h3 class="font-bold text-gray-800 text-lg">PMC Name Transfer</h3>
+                    <p class="text-xs text-gray-500 mt-1">Property tax name change services</p>
+                </div>
+                <i class="fa-solid fa-chevron-right text-gray-300 ml-auto"></i>
+            </div>
+
+            <div onclick="openForm('MSED')" class="bg-white p-5 rounded-xl shadow-card flex items-center gap-4 border-l-8 border-gov-accent active:bg-orange-50 transition cursor-pointer">
+                <div class="w-12 h-12 rounded-full bg-orange-100 text-gov-accent flex items-center justify-center text-xl shrink-0">
+                    <i class="fa-solid fa-bolt"></i>
+                </div>
+                <div>
+                    <h3 class="font-bold text-gray-800 text-lg">MSED Transfer</h3>
+                    <p class="text-xs text-gray-500 mt-1">Electricity meter name change</p>
+                </div>
+                <i class="fa-solid fa-chevron-right text-gray-300 ml-auto"></i>
+            </div>
+        </div>
+    </div>
+
+    <!-- ENTRY FORM MODAL -->
+    <div id="form-modal" class="fixed inset-0 bg-white z-50 hidden flex flex-col h-[100dvh]">
+        <div class="bg-gov-blue text-white h-14 flex items-center px-4 shadow-md shrink-0 z-10">
+            <button onclick="closeForm()" class="mr-4"><i class="fa-solid fa-arrow-left"></i></button>
+            <h2 class="font-medium text-lg" id="form-title">New Application</h2>
+        </div>
+
+        <div class="flex-1 overflow-y-auto overflow-x-hidden p-5 bg-[#f0f2f5] w-full pb-20">
+            <form id="app-form" onsubmit="saveApplication(event)">
+                <input type="hidden" id="entry-id">
+                <input type="hidden" id="service-type">
+
+                <div class="mb-6">
+                    <h3 class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-4">Applicant Details</h3>
+                    <div class="input-group">
+                        <input type="text" id="customer-name" placeholder=" " required>
+                        <label>Full Name</label>
+                    </div>
+                    <div class="input-group">
+                        <input type="tel" id="mobile-number" placeholder=" " pattern="[0-9]{10}" required>
+                        <label>Mobile Number</label>
+                    </div>
+                </div>
+
+                <!-- PMC FIELDS (Expanded to match MSED) -->
+                <div id="pmc-fields" class="hidden mb-6">
+                    <h3 class="text-xs font-bold text-gov-blue uppercase tracking-wider mb-4 border-b border-gray-200 pb-2">PMC Specifics</h3>
+                    <div class="input-group">
+                        <input type="text" id="pmc-prop-no" placeholder=" ">
+                        <label>UPIC ID</label>
+                    </div>
+                    
+                    <!-- Newly Added Fields for PMC -->
+                    <div class="input-group">
+                        <input type="text" id="pmc-pa" placeholder=" ">
+                        <label>Property Address</label>
+                    </div>
+                    
+                    <div class="input-group">
+                        <input type="text" id="pmc-old-owner" placeholder=" ">
+                        <label>Existing Owner Name</label>
+                    </div>
+
+                    <div class="input-group">
+                        <select id="pmc-reason" class="bg-white">
+                            <option value="" disabled selected>Select Reason</option>
+                            <option value="Sale">Sale</option>
+                            <option value="Gift Deed">Gift Deed</option>
+                            <option value="Death of Owner">Death of Owner</option>
+                            <option value="Other">Other</option>
+                        </select>
+                        <label>Reason</label>
+                    </div>
+
+                    <div class="mt-4">
+                        <p class="text-xs text-gray-500 font-bold mb-2">Documents Enclosed</p>
+                        <div class="checkbox-group">
+                            <label><input type="checkbox" name="pmc-docs" value="Aadhar Card"> Aadhar Card</label>
+                            <label><input type="checkbox" name="pmc-docs" value="Index 2"> Index 2</label>
+                            <label><input type="checkbox" name="pmc-docs" value="Property Tax Bill"> Property Tax Bill</label>
+                            <!-- New Options -->
+                            <label><input type="checkbox" name="pmc-docs" value="Possession Letter"> Possession Letter</label>
+                            <label><input type="checkbox" name="pmc-docs" value="Tax Payment Receipt"> Tax Payment Receipt</label>
+                            <label><input type="checkbox" name="pmc-docs" value="Hastantran Form"> Hastantran Form</label>
+                            
+                            <label><input type="checkbox" name="pmc-docs" value="Other" onchange="toggleOtherDoc(this, 'pmc')"> Other (Specify)</label>
+                        </div>
+                        <div class="input-group mt-2 hidden" id="pmc-doc-other-container">
+                             <input type="text" id="pmc-doc-other-text" placeholder=" ">
+                             <label>Specify Document</label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- MSED FIELDS -->
+                <div id="msed-fields" class="hidden mb-6">
+                    <h3 class="text-xs font-bold text-gov-accent uppercase tracking-wider mb-4 border-b border-gray-200 pb-2">MSED Specifics</h3>
+                    
+                    <div class="input-group">
+                        <input type="text" id="msed-consumer" placeholder=" ">
+                        <label>Consumer Number</label>
+                    </div>
+                    <div class="input-group">
+                        <input type="text" id="msed-pa" placeholder=" ">
+                        <label>Property Address</label>
+                    </div>
+
+                    <div class="input-group">
+                        <input type="text" id="msed-old-owner" placeholder=" ">
+                        <label>Old Owner Name</label>
+                    </div>
+
+                    <div class="input-group">
+                        <select id="msed-reason" class="bg-white">
+                            <option value="" disabled selected>Select Reason</option>
+                            <option value="Sale">Sale</option>
+                            <option value="Gift Deed">Gift Deed</option>
+                            <option value="Death of Owner">Death of Owner</option>
+                            <option value="Other">Other</option>
+                        </select>
+                        <label>Reason</label>
+                    </div>
+
+                    <div class="mt-4">
+                        <p class="text-xs text-gray-500 font-bold mb-2">Documents Enclosed</p>
+                        <div class="checkbox-group">
+                            <label><input type="checkbox" name="msed-docs" value="Aadhar Card"> Aadhar Card</label>
+                            <label><input type="checkbox" name="msed-docs" value="Index 2"> Index 2</label>
+                            <label><input type="checkbox" name="msed-docs" value="Electricity Bill"> Electricity Bill</label>
+                            <label><input type="checkbox" name="msed-docs" value="Other" onchange="toggleOtherDoc(this, 'msed')"> Other (Specify)</label>
+                        </div>
+                        <div class="input-group mt-2 hidden" id="msed-doc-other-container">
+                             <input type="text" id="msed-doc-other-text" placeholder=" ">
+                             <label>Specify Document</label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- NEW DESCRIPTION FIELD (Common to both) -->
+                <div class="mb-6">
+                    <h3 class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-4 border-b border-gray-200 pb-2">Additional Info</h3>
+                    <div class="input-group">
+                        <textarea id="app-description" rows="3" placeholder=" "></textarea>
+                        <label>Description (Optional)</label>
+                    </div>
+                </div>
+
+                <div class="pb-10 pt-4">
+                    <button type="submit" class="w-full bg-gov-blue text-white py-3 rounded shadow hover:bg-blue-900 transition font-medium uppercase tracking-wide text-sm">Submit Application</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- DETAIL SHEET -->
+    <div id="detail-overlay" class="fixed inset-0 bg-black/60 z-40 hidden backdrop-blur-sm transition-opacity opacity-0" onclick="closeDetail()"></div>
+    <div id="detail-sheet" class="fixed bottom-0 left-0 right-0 bg-white z-40 rounded-t-[24px] transform translate-y-full transition-transform duration-300 max-w-[480px] mx-auto max-h-[90vh] flex flex-col">
+        <div class="w-12 h-1.5 bg-gray-300 rounded-full mx-auto mt-3 mb-4 shrink-0"></div>
+        
+        <div class="px-6 pb-8 overflow-y-auto">
+            <div class="flex items-start justify-between mb-6">
+                <div>
+                    <h2 class="text-xl font-bold text-gray-800" id="detail-name">Name</h2>
+                    <p class="text-sm text-gray-500" id="detail-id">ID: --</p>
+                </div>
+                <div id="detail-badge" class="px-3 py-1 rounded-full text-xs font-bold bg-gray-100 text-gray-600">PENDING</div>
+            </div>
+
+            <div class="bg-gray-50 p-4 rounded-lg border border-gray-100 mb-6 text-sm text-gray-700 space-y-2" id="detail-content"></div>
+            
+            <!-- Description Display in Details -->
+            <div id="detail-description-container" class="hidden mb-6">
+                <p class="text-xs text-gray-500 font-bold uppercase mb-1">Description</p>
+                <p class="text-sm text-gray-700 bg-white p-3 rounded border border-gray-200" id="detail-description">--</p>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3 mb-3">
+                <button onclick="changeStatus('Completed')" class="py-3 rounded-lg border-2 border-gov-green text-gov-green font-bold text-sm hover:bg-green-50">Approve</button>
+                <button onclick="changeStatus('Rejected')" class="py-3 rounded-lg border-2 border-gov-red text-gov-red font-bold text-sm hover:bg-red-50">Reject</button>
+            </div>
+            
+            <div class="flex gap-3 mt-2">
+                 <button onclick="editEntry()" class="flex-1 py-3 bg-gov-blue text-white rounded-lg font-bold text-sm shadow">Edit</button>
+                 <button onclick="openDeleteModal()" class="w-12 py-3 bg-gray-200 text-gray-600 rounded-lg font-bold text-sm"><i class="fa-solid fa-trash"></i></button>
+            </div>
+        </div>
+    </div>
+
+    <!-- DELETE MODAL -->
+    <div id="delete-modal" class="fixed inset-0 bg-black/60 z-[60] hidden flex items-center justify-center px-4 fade-in">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-sm p-6 scale-in">
+            <div class="w-12 h-12 rounded-full bg-red-100 text-red-600 flex items-center justify-center mx-auto mb-4 text-xl">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+            </div>
+            <h3 class="text-lg font-bold text-center text-gray-900 mb-2">Confirm Delete</h3>
+            <p class="text-sm text-gray-500 text-center mb-6">Are you sure you want to remove this application? This action cannot be undone.</p>
+            
+            <div class="grid grid-cols-2 gap-3">
+                <button onclick="closeDeleteModal()" class="py-3 rounded-lg bg-gray-100 text-gray-700 font-bold text-sm hover:bg-gray-200">Cancel</button>
+                <button onclick="confirmDeleteAction()" class="py-3 rounded-lg bg-gov-red text-white font-bold text-sm hover:bg-red-700 shadow-lg shadow-red-500/30">Delete</button>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<script>
+    // --- IndexedDB Setup ---
+    const dbName = 'ServiceManagerDB';
+    const dbVersion = 1;
+    let db;
+
+    // --- State (In-Memory for UI Rendering) ---
+    let applications = [];
+    let notifications = [];
+    let currentId = null;
+    let currentFilter = 'all';
+    let exportWorkbook = null; 
+    let exportInterval = null; // Global variable for export interval
+
+    // --- Storage Limit ---
+    // REMOVED 1GB Limit Constant
+
+    // Initialize DB and App
+    document.addEventListener('DOMContentLoaded', async () => {
+        try {
+            db = await initDB();
+            await refreshData();
+            await checkPendingReminders();
+        } catch (e) {
+            console.error("Failed to initialize DB:", e);
+        }
+    });
+
+    // --- DB Helper Functions ---
+    function initDB() {
+        return new Promise((resolve, reject) => {
+            const request = indexedDB.open(dbName, dbVersion);
+
+            request.onupgradeneeded = (event) => {
+                const database = event.target.result;
+                if (!database.objectStoreNames.contains('applications')) {
+                    database.createObjectStore('applications', { keyPath: 'id' });
+                }
+                if (!database.objectStoreNames.contains('notifications')) {
+                    database.createObjectStore('notifications', { keyPath: 'id' });
+                }
+            };
+
+            request.onsuccess = (event) => {
+                resolve(event.target.result);
+            };
+
+            request.onerror = (event) => {
+                reject(event.target.error);
+            };
+        });
+    }
+
+    const api = {
+        getAllApps: () => new Promise((resolve, reject) => {
+             const tx = db.transaction('applications', 'readonly');
+             const store = tx.objectStore('applications');
+             const req = store.getAll();
+             req.onsuccess = () => resolve(req.result);
+             req.onerror = () => reject(req.error);
+        }),
+        saveApp: (app) => new Promise((resolve, reject) => {
+            const tx = db.transaction('applications', 'readwrite');
+            const store = tx.objectStore('applications');
+            const req = store.put(app); 
+            req.onsuccess = () => resolve(req.result);
+            req.onerror = () => reject(req.error);
+        }),
+        deleteApp: (id) => new Promise((resolve, reject) => {
+            const tx = db.transaction('applications', 'readwrite');
+            const store = tx.objectStore('applications');
+            const req = store.delete(id);
+            req.onsuccess = () => resolve();
+            req.onerror = () => reject(req.error);
+        }),
+        getAllNotifs: () => new Promise((resolve, reject) => {
+             const tx = db.transaction('notifications', 'readonly');
+             const store = tx.objectStore('notifications');
+             const req = store.getAll();
+             req.onsuccess = () => resolve(req.result);
+             req.onerror = () => reject(req.error);
+        }),
+        saveNotif: (notif) => new Promise((resolve, reject) => {
+            const tx = db.transaction('notifications', 'readwrite');
+            const store = tx.objectStore('notifications');
+            const req = store.put(notif);
+            req.onsuccess = () => resolve(req.result);
+            req.onerror = () => reject(req.error);
+        }),
+        deleteNotif: (id) => new Promise((resolve, reject) => {
+            const tx = db.transaction('notifications', 'readwrite');
+            const store = tx.objectStore('notifications');
+            const req = store.delete(id);
+            req.onsuccess = () => resolve();
+            req.onerror = () => reject(req.error);
+        })
+    };
+
+    // --- Data Management ---
+    async function refreshData() {
+        const apps = await api.getAllApps();
+        applications = apps.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+        const notifs = await api.getAllNotifs();
+        notifications = notifs.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+        renderDashboard();
+        renderList();
+        renderNotifications();
+        updateNotificationBadge();
+    }
+
+    async function addNotification(text, meta = {}, skipRefresh = false) {
+        // Removed storage blocking check
+
+        const notif = {
+            id: Date.now() + Math.random(), 
+            text: text,
+            date: new Date().toISOString(),
+            read: false,
+            meta: meta
+        };
+        await api.saveNotif(notif);
+        if(!skipRefresh) await refreshData();
+    }
+
+    async function checkPendingReminders() {
+        const now = new Date();
+        const promises = [];
+
+        applications.forEach(app => {
+            if (app.status === 'Pending') {
+                const subDate = new Date(app.date);
+                const diffTime = Math.abs(now - subDate);
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
+                const monthsPending = Math.floor(diffDays / 30);
+
+                if (monthsPending >= 1) {
+                    for (let i = 1; i <= monthsPending; i++) {
+                        const alreadyNotified = notifications.find(n => 
+                            n.meta && String(n.meta.appId) === String(app.id) && n.meta.type === 'reminder' && n.meta.monthCount === i
+                        );
+
+                        if (!alreadyNotified) {
+                            const text = `It's been a Month since ${app.name}'s Application for ${app.type} is submitted, Please Have A Look!`;
+                            
+                            // Removed storage blocking check
+                            promises.push(
+                                api.saveNotif({
+                                    id: Date.now() + Math.random(),
+                                    text: text,
+                                    date: new Date().toISOString(),
+                                    read: false,
+                                    meta: { appId: app.id, type: 'reminder', monthCount: i }
+                                })
+                            );
+                        }
+                    }
+                }
+            }
+        });
+
+        if (promises.length > 0) {
+            await Promise.all(promises);
+            await refreshData();
+        }
+    }
+
+    // --- ID Generator ---
+    function generateNewId(type) {
+        const now = new Date();
+        const mm = String(now.getMonth() + 1).padStart(2, '0'); 
+        const yy = String(now.getFullYear()).slice(-2);
+        const prefix = type; 
+        const pattern = new RegExp(`^${prefix}(\\d{2})${mm}${yy}$`);
+        
+        let maxSeq = 0;
+        applications.forEach(app => {
+            if (app.type !== type) return; 
+            const idStr = String(app.id);
+            const match = idStr.match(pattern);
+            if (match) {
+                const seq = parseInt(match[1], 10);
+                if (seq > maxSeq) maxSeq = seq;
+            }
+        });
+        
+        const nextSeq = String(maxSeq + 1).padStart(2, '0');
+        return `${prefix}${nextSeq}${mm}${yy}`;
+    }
+
+    // --- Export Logic ---
+    function openExportModal() {
+        closeSidebar();
+        const modal = document.getElementById('export-modal');
+        const progressCircle = document.getElementById('export-progress-circle');
+        const percentText = document.getElementById('export-percent');
+        const statusText = document.getElementById('export-status');
+        const actionContainer = document.getElementById('export-action-container');
+        
+        modal.classList.remove('hidden');
+        actionContainer.classList.add('hidden');
+        progressCircle.style.strokeDashoffset = 283; 
+        percentText.innerText = '0%';
+        statusText.innerText = 'Preparing data...';
+        statusText.classList.add('animate-pulse');
+        exportWorkbook = null;
+
+        let progress = 0;
+        const totalDuration = 6000; 
+        const intervalTime = 60; 
+        const steps = totalDuration / intervalTime;
+        const increment = 100 / steps;
+
+        // Clear any existing interval
+        if (exportInterval) clearInterval(exportInterval);
+
+        exportInterval = setInterval(() => {
+            progress += increment;
+            if (progress >= 100) progress = 100;
+            
+            const offset = 283 - (283 * progress / 100);
+            progressCircle.style.strokeDashoffset = offset;
+            percentText.innerText = Math.floor(progress) + '%';
+
+            if (progress > 20 && progress < 50) statusText.innerText = 'Processing MSED Records...';
+            if (progress > 50 && progress < 80) statusText.innerText = 'Processing PMC Records...';
+            if (progress > 80 && progress < 99) statusText.innerText = 'Finalizing Backup...';
+
+            if (progress >= 100) {
+                clearInterval(exportInterval);
+                statusText.innerText = 'Export Completed Successfully';
+                statusText.classList.remove('animate-pulse');
+                actionContainer.classList.remove('hidden');
+                prepareWorkbook();
+            }
+        }, intervalTime);
+    }
+
+    function prepareWorkbook() {
+        // MSED Data
+        const msedData = applications.filter(a => a.type === 'MSED').map(a => ({
+            "ID": a.id,
+            "Applicant Name": a.name,
+            "Mobile": a.mobile,
+            "Status": a.status,
+            "Date": new Date(a.date).toLocaleDateString(),
+            "Consumer No": a.details.consumer,
+            "Address": a.details.pa,
+            "Old Owner": a.details.oldOwner,
+            "Reason": a.details.reason,
+            "Documents": Array.isArray(a.details.documents) ? a.details.documents.join(', ') : '',
+            "Description": a.description
+        }));
+
+        // PMC Data
+        const pmcData = applications.filter(a => a.type === 'PMC').map(a => ({
+            "ID": a.id,
+            "Applicant Name": a.name,
+            "Mobile": a.mobile,
+            "Status": a.status,
+            "Date": new Date(a.date).toLocaleDateString(),
+            "UPIC ID": a.details.propNo,
+            "Address": a.details.pa,
+            "Old Owner": a.details.oldOwner,
+            "Reason": a.details.reason,
+            "Documents": Array.isArray(a.details.documents) ? a.details.documents.join(', ') : '',
+            "Description": a.description
+        }));
+
+        // Notification Data
+        const notifData = notifications.map(n => ({
+            "ID": n.id,
+            "Message": n.text,
+            "Date": new Date(n.date).toLocaleString(),
+            "Status": n.read ? 'Read' : 'Unread'
+        }));
+
+        // Create Workbook
+        const wb = XLSX.utils.book_new();
+        
+        const ws1 = XLSX.utils.json_to_sheet(msedData);
+        XLSX.utils.book_append_sheet(wb, ws1, "MSED");
+        
+        const ws2 = XLSX.utils.json_to_sheet(pmcData);
+        XLSX.utils.book_append_sheet(wb, ws2, "PMC");
+        
+        const ws3 = XLSX.utils.json_to_sheet(notifData);
+        XLSX.utils.book_append_sheet(wb, ws3, "Notifications");
+
+        exportWorkbook = wb;
+    }
+
+    function downloadExport() {
+        if (!exportWorkbook) return;
+        
+        const date = new Date();
+        const day = date.getDate().toString().padStart(2, '0');
+        const month = (date.getMonth() + 1).toString().padStart(2, '0');
+        const year = date.getFullYear();
+        const fileName = `BackUp for DocuDesk Service Manager on ${day}${month}${year}.xlsx`;
+
+        XLSX.writeFile(exportWorkbook, fileName);
+        closeExportModal();
+    }
+
+    function closeExportModal() {
+        if (exportInterval) clearInterval(exportInterval);
+        document.getElementById('export-modal').classList.add('hidden');
+    }
+
+    // --- Sidebar Menu ---
+    function openSidebar() {
+        const overlay = document.getElementById('sidebar-overlay');
+        const menu = document.getElementById('sidebar-menu');
+        
+        overlay.classList.remove('hidden');
+        setTimeout(() => overlay.classList.remove('opacity-0'), 10);
+        menu.classList.remove('-translate-x-full');
+        
+        // Update Storage Info
+        updateStorageUsage();
+    }
+
+    // --- Update Storage Info & Check Limit ---
+    
+    // Format bytes helper
+    function formatBytes(bytes, decimals = 2) {
+        if (!+bytes) return '0 Bytes';
+        const k = 1024;
+        const dm = decimals < 0 ? 0 : decimals;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return `${parseFloat((bytes / Math.pow(k, i)).toFixed(dm))} ${sizes[i]}`;
+    }
+
+    async function checkStorageAvailability() {
+        // UI Check Only
+        if ('storage' in navigator && 'estimate' in navigator.storage) {
+            try {
+                const { usage, quota } = await navigator.storage.estimate();
+                if (usage >= quota) {
+                    return false;
+                }
+            } catch (error) {
+                console.error("Storage Check Error:", error);
+                return true; 
+            }
+        }
+        return true;
+    }
+
+    async function updateStorageUsage() {
+        if ('storage' in navigator && 'estimate' in navigator.storage) {
+            try {
+                const { usage, quota } = await navigator.storage.estimate();
+                
+                // Format Usage
+                const usageText = formatBytes(usage);
+                const quotaText = formatBytes(quota);
+
+                // Calculate percentage based on Actual Quota
+                const percent = (usage / quota) * 100;
+
+                document.getElementById('storage-usage').innerText = usageText;
+                document.getElementById('storage-quota').innerText = `of ${quotaText}`;
+                
+                // Visual feedback: Red bar if near full
+                const bar = document.getElementById('storage-bar');
+                bar.style.width = `${Math.min(percent, 100)}%`;
+                
+                if (percent > 90) {
+                    bar.classList.remove('bg-gov-accent');
+                    bar.classList.add('bg-red-500');
+                } else {
+                    bar.classList.add('bg-gov-accent');
+                    bar.classList.remove('bg-red-500');
+                }
+
+            } catch (error) {
+                console.error('Storage estimate failed:', error);
+                document.getElementById('storage-usage').innerText = 'Unknown';
+                document.getElementById('storage-quota').innerText = 'of Unknown';
+            }
+        } else {
+            document.getElementById('storage-usage').innerText = 'Not Supported';
+            document.getElementById('storage-quota').innerText = '';
+        }
+    }
+
+    function closeSidebar() {
+        const overlay = document.getElementById('sidebar-overlay');
+        const menu = document.getElementById('sidebar-menu');
+        
+        menu.classList.add('-translate-x-full');
+        overlay.classList.add('opacity-0');
+        setTimeout(() => overlay.classList.add('hidden'), 300);
+    }
+
+    function copyURL() {
+        const text = "MyCopyTextURL";
+        const input = document.createElement('textarea');
+        input.value = text;
+        document.body.appendChild(input);
+        input.select();
+        document.execCommand('copy');
+        document.body.removeChild(input);
+        closeSidebar();
+    }
+
+    // --- UI Logic ---
+    function toggleNotifications() {
+        const dash = document.getElementById('view-dashboard');
+        const manage = document.getElementById('view-manage');
+        const notif = document.getElementById('view-notifications');
+        const dashNav = document.getElementById('nav-dashboard');
+        const manageNav = document.getElementById('nav-manage');
+
+        if (!notif.classList.contains('hidden')) {
+            switchTab('dashboard');
+        } else {
+            dash.classList.add('hidden');
+            manage.classList.add('hidden');
+            notif.classList.remove('hidden');
+            dashNav.className = "flex flex-col items-center text-gray-400 w-full";
+            manageNav.className = "flex flex-col items-center text-gray-400 w-full";
+        }
+    }
+
+    function updateNotificationBadge() {
+        const unreadCount = notifications.filter(n => !n.read).length;
+        const badge = document.getElementById('notif-badge');
+        if (unreadCount > 0) {
+            badge.classList.remove('hidden');
+        } else {
+            badge.classList.add('hidden');
+        }
+    }
+
+    function renderNotifications() {
+        const list = document.getElementById('notif-list');
+        const empty = document.getElementById('notif-empty');
+        list.innerHTML = '';
+
+        if (notifications.length === 0) {
+            empty.classList.remove('hidden');
+            empty.classList.add('flex');
+        } else {
+            empty.classList.add('hidden');
+            empty.classList.remove('flex');
+
+            notifications.forEach(n => {
+                const date = new Date(n.date).toLocaleDateString();
+                const time = new Date(n.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                const bgClass = n.read ? 'notif-read' : 'notif-unread';
+                const textClass = n.read ? 'text-gray-500' : 'text-gray-800 font-medium';
+                const iconClass = n.read ? 'text-gray-400' : 'text-gov-blue';
+
+                const tapHandler = `handleNotifTap(this, '${n.id}')`;
+
+                list.innerHTML += `
+                    <div onclick="${tapHandler}" class="p-4 rounded shadow-sm flex items-start gap-3 cursor-pointer transition select-none ${bgClass}">
+                        <div class="mt-1 ${iconClass}"><i class="fa-solid fa-circle-info"></i></div>
+                        <div class="flex-1">
+                            <p class="text-sm ${textClass}">${n.text}</p>
+                            <p class="text-[10px] text-gray-400 mt-1">${date} at ${time}</p>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+    }
+
+    // Tap Handling
+    let lastTap = 0;
+    let lastTapId = null;
+
+    async function handleNotifTap(el, id) {
+        const numId = Number(id); 
+
+        const currentTime = new Date().getTime();
+        const tapLength = currentTime - lastTap;
+        
+        if (lastTapId === numId && tapLength < 300 && tapLength > 0) {
+            await api.deleteNotif(numId);
+            lastTap = 0;
+            lastTapId = null;
+        } else {
+            const notif = notifications.find(n => String(n.id) === String(numId));
+            if (notif && !notif.read) {
+                notif.read = true;
+                await api.saveNotif(notif);
+            }
+            lastTap = currentTime;
+            lastTapId = numId;
+        }
+        await refreshData();
+    }
+
+    function toggleOtherDoc(checkbox, prefix) {
+        const container = document.getElementById(`${prefix}-doc-other-container`);
+        if(checkbox.checked) {
+            container.classList.remove('hidden');
+        } else {
+            container.classList.add('hidden');
+        }
+    }
+
+    function switchTab(tab) {
+        document.getElementById('view-dashboard').classList.toggle('hidden', tab !== 'dashboard');
+        document.getElementById('view-manage').classList.toggle('hidden', tab !== 'manage');
+        document.getElementById('view-notifications').classList.add('hidden');
+        
+        const dashNav = document.getElementById('nav-dashboard');
+        const manageNav = document.getElementById('nav-manage');
+        
+        if (tab === 'dashboard') {
+            dashNav.className = "flex flex-col items-center text-gov-blue w-full";
+            manageNav.className = "flex flex-col items-center text-gray-400 w-full";
+        } else {
+            dashNav.className = "flex flex-col items-center text-gray-400 w-full";
+            manageNav.className = "flex flex-col items-center text-gov-blue w-full";
+        }
+    }
+
+    function openServiceSelection() {
+        document.getElementById('service-modal').classList.remove('hidden');
+    }
+
+    function closeServiceSelection() {
+        document.getElementById('service-modal').classList.add('hidden');
+    }
+
+    function openForm(type, editId = null) {
+        closeServiceSelection();
+        const formModal = document.getElementById('form-modal');
+        formModal.classList.remove('hidden');
+        formModal.querySelector('.overflow-y-auto').scrollTop = 0;
+        
+        document.getElementById('app-form').reset();
+        document.getElementById('pmc-doc-other-container').classList.add('hidden');
+        document.getElementById('msed-doc-other-container').classList.add('hidden');
+        document.getElementById('entry-id').value = '';
+        document.getElementById('service-type').value = type;
+        
+        const pmcFields = document.getElementById('pmc-fields');
+        const msedFields = document.getElementById('msed-fields');
+        
+        if (type === 'PMC') {
+            document.getElementById('form-title').innerText = editId ? "Edit PMC Application" : "New PMC Transfer";
+            pmcFields.classList.remove('hidden');
+            msedFields.classList.add('hidden');
+            document.getElementById('pmc-prop-no').required = true;
+            document.getElementById('msed-consumer').required = false;
+        } else {
+            document.getElementById('form-title').innerText = editId ? "Edit MSED Application" : "New MSED Transfer";
+            msedFields.classList.remove('hidden');
+            pmcFields.classList.add('hidden');
+            document.getElementById('msed-consumer').required = true;
+            document.getElementById('pmc-prop-no').required = false;
+        }
+
+        if (editId) {
+            const app = applications.find(a => String(a.id) === String(editId));
+            if (app) {
+                document.getElementById('entry-id').value = app.id;
+                document.getElementById('customer-name').value = app.name;
+                document.getElementById('mobile-number').value = app.mobile;
+                document.getElementById('app-description').value = app.description || '';
+                
+                if (type === 'PMC') {
+                    document.getElementById('pmc-prop-no').value = app.details.propNo || '';
+                    document.getElementById('pmc-pa').value = app.details.pa || '';
+                    document.getElementById('pmc-old-owner').value = app.details.oldOwner || '';
+                    document.getElementById('pmc-reason').value = app.details.reason || '';
+                    const savedDocs = app.details.documents || [];
+                    document.querySelectorAll('input[name="pmc-docs"]').forEach(cb => {
+                        if (cb.value === 'Other') {
+                            const otherStr = savedDocs.find(d => d.startsWith('Other: '));
+                            if (otherStr) {
+                                cb.checked = true;
+                                document.getElementById('pmc-doc-other-container').classList.remove('hidden');
+                                document.getElementById('pmc-doc-other-text').value = otherStr.replace('Other: ', '');
+                            } else {
+                                cb.checked = false;
+                            }
+                        } else {
+                            cb.checked = savedDocs.includes(cb.value);
+                        }
+                    });
+
+                } else {
+                    document.getElementById('msed-consumer').value = app.details.consumer || '';
+                    document.getElementById('msed-pa').value = app.details.pa || '';
+                    document.getElementById('msed-old-owner').value = app.details.oldOwner || '';
+                    document.getElementById('msed-reason').value = app.details.reason || '';
+                    const savedDocs = app.details.documents || [];
+                    document.querySelectorAll('input[name="msed-docs"]').forEach(cb => {
+                        if (cb.value === 'Other') {
+                            const otherStr = savedDocs.find(d => d.startsWith('Other: '));
+                            if (otherStr) {
+                                cb.checked = true;
+                                document.getElementById('msed-doc-other-container').classList.remove('hidden');
+                                document.getElementById('msed-doc-other-text').value = otherStr.replace('Other: ', '');
+                            } else {
+                                cb.checked = false;
+                            }
+                        } else {
+                            cb.checked = savedDocs.includes(cb.value);
+                        }
+                    });
+                }
+            }
+        }
+    }
+
+    function closeForm() {
+        document.getElementById('form-modal').classList.add('hidden');
+    }
+
+    async function saveApplication(e) {
+        e.preventDefault();
+        
+        // Removed storage blocking check
+
+        const id = document.getElementById('entry-id').value;
+        const type = document.getElementById('service-type').value;
+        const name = document.getElementById('customer-name').value;
+        const mobile = document.getElementById('mobile-number').value;
+        const description = document.getElementById('app-description').value;
+        
+        let details = {};
+        
+        if (type === 'PMC') {
+            const docs = Array.from(document.querySelectorAll('input[name="pmc-docs"]:checked')).map(cb => {
+                if (cb.value === 'Other') {
+                    const txt = document.getElementById('pmc-doc-other-text').value;
+                    return txt ? `Other: ${txt}` : 'Other';
+                }
+                return cb.value;
+            });
+            details = { propNo: document.getElementById('pmc-prop-no').value, pa: document.getElementById('pmc-pa').value, oldOwner: document.getElementById('pmc-old-owner').value, reason: document.getElementById('pmc-reason').value, documents: docs };
+        } else {
+            const docs = Array.from(document.querySelectorAll('input[name="msed-docs"]:checked')).map(cb => {
+                if (cb.value === 'Other') {
+                    const txt = document.getElementById('msed-doc-other-text').value;
+                    return txt ? `Other: ${txt}` : 'Other';
+                }
+                return cb.value;
+            });
+            details = { consumer: document.getElementById('msed-consumer').value, pa: document.getElementById('msed-pa').value, oldOwner: document.getElementById('msed-old-owner').value, reason: document.getElementById('msed-reason').value, documents: docs };
+        }
+
+        if (id) {
+            // Edit existing
+            const app = applications.find(a => String(a.id) === String(id));
+            if (app) {
+                // Update properties
+                app.name = name;
+                app.mobile = mobile;
+                app.description = description;
+                app.details = details;
+                await api.saveApp(app);
+            }
+        } else {
+            // New Application
+            const newId = generateNewId(type);
+            const dateObj = new Date();
+            const dateStr = dateObj.toLocaleDateString('en-GB'); 
+            
+            const newApp = {
+                id: newId,
+                type,
+                name,
+                mobile,
+                description,
+                date: dateObj.toISOString(),
+                status: 'Pending',
+                details
+            };
+            
+            await api.saveApp(newApp);
+            await addNotification(`${name}'s Application for ${type} is submitted on ${dateStr}`, { appId: newId, type: 'submit' }, true); // Skip internal refresh
+        }
+
+        await refreshData();
+        closeForm();
+    }
+
+    // --- Rendering ---
+    function renderDashboard() {
+        const total = applications.length;
+        const pending = applications.filter(a => a.status === 'Pending').length;
+        document.getElementById('dash-total').innerText = total;
+        document.getElementById('dash-pending').innerText = pending;
+        const recent = applications.slice(0, 3);
+        const container = document.getElementById('recent-list');
+        container.innerHTML = '';
+        if (recent.length === 0) {
+            container.innerHTML = '<div class="text-center text-gray-400 text-xs py-4">No recent activity</div>';
+            return;
+        }
+        recent.forEach(app => container.innerHTML += createCardHTML(app));
+    }
+
+    function renderList() {
+        const container = document.getElementById('manage-list');
+        const search = document.getElementById('search-input').value.toLowerCase().trim();
+        
+        const filtered = applications.filter(app => {
+            let matchesFilter = false;
+            if (currentFilter === 'all') {
+                matchesFilter = true;
+            } else if (currentFilter === 'completed') {
+                matchesFilter = app.status === 'Completed';
+            } else {
+                matchesFilter = app.type.toLowerCase() === currentFilter;
+            }
+
+            const matchesSearch = 
+                (app.name && app.name.toLowerCase().includes(search)) || 
+                (app.mobile && String(app.mobile).includes(search)) || 
+                (app.id && String(app.id).toLowerCase().includes(search)) ||
+                (app.details.consumer && String(app.details.consumer).toLowerCase().includes(search)) ||
+                (app.details.propNo && String(app.details.propNo).toLowerCase().includes(search));
+
+            return matchesFilter && matchesSearch;
+        });
+
+        container.innerHTML = '';
+        document.getElementById('empty-msg').classList.toggle('flex', filtered.length === 0);
+        document.getElementById('empty-msg').classList.toggle('hidden', filtered.length > 0);
+        filtered.forEach(app => container.innerHTML += createCardHTML(app));
+    }
+
+    function createCardHTML(app) {
+        const isPMC = app.type === 'PMC';
+        const cardClass = isPMC ? 'card-pmc' : 'card-msed';
+        const icon = isPMC ? 'fa-building-columns' : 'fa-bolt';
+        const iconColor = isPMC ? 'text-gov-blue' : 'text-gov-accent';
+        const date = new Date(app.date).toLocaleDateString();
+        let subDetail = isPMC ? `UPIC ID: ${app.details.propNo || 'N/A'}` : `Cons No: ${app.details.consumer || 'N/A'}`;
+
+        return `
+        <div onclick="openDetail('${app.id}')" class="bg-white p-4 rounded shadow-card ${cardClass} flex justify-between items-center cursor-pointer active:bg-gray-50 transition">
+            <div class="flex items-center gap-4">
+                <div class="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center ${iconColor}">
+                    <i class="fa-solid ${icon}"></i>
+                </div>
+                <div>
+                    <h4 class="font-bold text-gray-800 text-sm">${app.name}</h4>
+                    <p class="text-[10px] text-gray-500 uppercase tracking-wide font-medium">${app.type} • ${subDetail}</p>
+                    <p class="text-[10px] text-gray-400 mt-0.5">${date}</p>
+                </div>
+            </div>
+            <div class="flex flex-col items-end">
+                ${getStatusBadge(app.status)}
+            </div>
+        </div>
+        `;
+    }
+
+    function getStatusBadge(status) {
+        let classes = "bg-gray-100 text-gray-600";
+        if (status === 'Completed') classes = "bg-green-100 text-gov-green";
+        if (status === 'Rejected') classes = "bg-red-100 text-gov-red";
+        if (status === 'Pending') classes = "bg-orange-100 text-gov-accent";
+        return `<span class="${classes} px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide">${status}</span>`;
+    }
+
+    function filterList(type) {
+        currentFilter = type;
+        ['all', 'pmc', 'msed', 'completed'].forEach(t => {
+            const btn = document.getElementById(`tab-${t}`);
+            if (t === type) {
+                btn.className = "px-4 py-1.5 rounded-full text-xs font-bold bg-gov-blue text-white shadow-sm whitespace-nowrap";
+            } else {
+                btn.className = "px-4 py-1.5 rounded-full text-xs font-bold bg-white text-gray-600 border border-gray-300 whitespace-nowrap";
+            }
+        });
+        renderList();
+    }
+
+    function openDetail(id) {
+        currentId = id;
+        const app = applications.find(a => String(a.id) === String(id));
+        if (!app) return;
+
+        document.getElementById('detail-name').innerText = app.name;
+        document.getElementById('detail-id').innerText = `ID: #${app.id}`;
+        document.getElementById('detail-badge').innerHTML = getStatusBadge(app.status);
+
+        const descContainer = document.getElementById('detail-description-container');
+        if (app.description) {
+            descContainer.classList.remove('hidden');
+            document.getElementById('detail-description').innerText = app.description;
+        } else {
+            descContainer.classList.add('hidden');
+        }
+
+        let content = `
+            <div class="flex justify-between border-b border-gray-200 pb-2">
+                <span class="text-gray-500">Service Type</span>
+                <span class="font-bold text-gray-800">${app.type} Transfer</span>
+            </div>
+            <div class="flex justify-between border-b border-gray-200 pb-2">
+                <span class="text-gray-500">Mobile</span>
+                <span class="font-bold text-gray-800">${app.mobile}</span>
+            </div>
+        `;
+
+        const docsList = app.details.documents ? app.details.documents.join(', ') : 'None';
+        const idLabel = app.type === 'PMC' ? 'UPIC ID' : 'Consumer No';
+        const idValue = app.type === 'PMC' ? app.details.propNo : app.details.consumer;
+        
+        content += `
+            <div class="flex justify-between border-b border-gray-200 pb-2">
+                <span class="text-gray-500">${idLabel}</span>
+                <span class="font-bold text-gray-800">${idValue || '-'}</span>
+            </div>
+            <div class="mb-2 border-b border-gray-200 pb-2">
+                <span class="text-gray-500 block text-xs">Property Address</span>
+                <span class="font-bold text-gray-800">${app.details.pa || '-'}</span>
+            </div>
+            <div class="grid grid-cols-2 gap-4 mb-2 border-b border-gray-200 pb-2">
+                <div>
+                    <span class="text-gray-500 block text-xs">Old Owner</span>
+                    <span class="font-bold text-gray-800">${app.details.oldOwner || '-'}</span>
+                </div>
+                <div>
+                    <span class="text-gray-500 block text-xs">Reason</span>
+                    <span class="font-bold text-gray-800">${app.details.reason || '-'}</span>
+                </div>
+            </div>
+            <div>
+                <span class="text-gray-500 block text-xs">Documents</span>
+                <span class="text-gray-800 text-xs italic">${docsList}</span>
+            </div>
+        `;
+
+        document.getElementById('detail-content').innerHTML = content;
+        const overlay = document.getElementById('detail-overlay');
+        const sheet = document.getElementById('detail-sheet');
+        overlay.classList.remove('hidden');
+        setTimeout(() => overlay.classList.remove('opacity-0'), 10);
+        sheet.classList.remove('translate-y-full');
+    }
+
+    function closeDetail() {
+        const overlay = document.getElementById('detail-overlay');
+        const sheet = document.getElementById('detail-sheet');
+        sheet.classList.add('translate-y-full');
+        overlay.classList.add('opacity-0');
+        setTimeout(() => overlay.classList.add('hidden'), 300);
+    }
+
+    async function changeStatus(status) {
+        if (!currentId) return;
+        
+        // Removed storage blocking check
+
+        const app = applications.find(a => String(a.id) === String(currentId));
+        if (app) {
+            app.status = status;
+            await api.saveApp(app);
+            
+            // Notification
+            const dateStr = new Date().toLocaleDateString('en-GB');
+            await addNotification(`${app.name}'s Application for ${app.type} is ${status} on ${dateStr}`, { appId: app.id, type: 'status' });
+            
+            await refreshData();
+            closeDetail();
+        }
+    }
+
+    function openDeleteModal() {
+        if (!currentId) return;
+        document.getElementById('delete-modal').classList.remove('hidden');
+    }
+
+    function closeDeleteModal() {
+        document.getElementById('delete-modal').classList.add('hidden');
+    }
+
+    async function confirmDeleteAction() {
+        if (!currentId) return;
+        
+        await api.deleteApp(currentId);
+        
+        const relatedNotifs = notifications.filter(n => n.meta && String(n.meta.appId) === String(currentId));
+        for (const notif of relatedNotifs) {
+            await api.deleteNotif(notif.id);
+        }
+
+        await refreshData();
+        closeDeleteModal();
+        closeDetail();
+        currentId = null;
+    }
+</script>
+</body>
+</html>
