@@ -922,7 +922,16 @@
         if (exportInterval) clearInterval(exportInterval);
         document.getElementById('export-modal').classList.add('hidden');
     }
+// --- entry for editEntry ----
+function editEntry() {
+    if (!currentId) return;
 
+    const app = applications.find(a => String(a.id) === String(currentId));
+    if (!app) return;
+
+    closeDetail();
+    openForm(app.type, app.id);
+}
     // --- Sidebar Menu ---
     function openSidebar() {
         const overlay = document.getElementById('sidebar-overlay');
